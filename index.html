@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>頭頸癌化療氣球大作戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; overflow-x: hidden; }
+        .balloon-float { transition: bottom 0.03s linear; }
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 1; }
+            75%, 100% { transform: scale(1.5); opacity: 0; }
+        }
+        .animate-ping-custom { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+    <header class="sticky top-0 z-50 bg-slate-800/90 border-b border-slate-700 p-4 shadow-lg backdrop-blur-sm">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-cyan-400">
+                ✨ 頭頸癌化療氣球大作戰
+            </h1>
+            <div id="stats-container" class="hidden flex gap-4 items-center">
+                <div class="bg-slate-700 px-3 py-1 rounded-full text-yellow-400 font-mono flex items-center gap-2">
+                    🏆 <span id="score-display">0</span>
+                </div>
+                <div id="lives-display" class="flex gap-1 text-rose-500 text-xl"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 mt-4">
+        <div id="game-menu" class="text-center py-20 bg-slate-800 rounded-3xl border border-slate-700">
+            <div class="text-8xl mb-6">🎈</div>
+            <h2 class="text-4xl font-black mb-4">衛教知識挑戰賽</h2>
+            <p class="text-slate-400 mb-10 max-w-md mx-auto">測試你對頭頸癌化療的了解！點擊氣球回答問題，答對得分，答錯或氣球飄走會失去生命值。</p>
+            <button onclick="startGame()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-10 py-4 rounded-full text-xl font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/50">
+                🚀 開始任務
+            </button>
+        </div>
+
+        <div id="game-playing" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div id="balloon-stage" class="lg:col-span-2 relative bg-slate-800 h-[500px] rounded-3xl border-4 border-slate-700 overflow-hidden">
+                </div>
+
+            <div id="question-panel" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl min-h-[400px]">
+                <div id="panel-empty" class="h-full flex flex-col items-center justify-center text-slate-500 space-y-4">
+                    <p class="font-bold text-center">請點擊左側氣球<br/>開始作答</p>
+                </div>
+                <div id="panel-content" class="hidden space-y-6">
+                    </div>
+            </div>
+        </div>
+
+        <div id="game-end-overlay" class="hidden fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-6">
+            <div class="max-w-sm w-full bg-slate-800 p-10 rounded-3xl border-2 border-slate-700 text-center shadow-2xl">
+                <div id="end-icon" class="text-7xl mb-6"></div>
+                <h2 id="end-title" class="text-3xl font-black mb-2"></h2>
+                <p class="text-slate-400 mb-8 text-xl">最終得分：<span id="final-score" class="text-yellow-400 font-bold"></span></p>
+                <button onclick="startGame()" class="w-full py-4 bg-cyan-500 text-slate-900 font-black rounded-2xl hover:bg-cyan-400 transition-all hover:scale-105 shadow-lg">
+                    🔄 再試一次
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const INITIAL_LIVES = 6;
+        const questions = [
+            { id: 1, question: '頭頸癌進行化學治療的主要目的為何？', options: ['A. 減少腫瘤體積', 'B. 控制腫瘤進展', 'C. 緩解症狀', 'D. 以上皆是'], correctAnswer: 'D. 以上皆是' },
+            { id: 2, question: '裝置周邊導管或人工血管之手臂活動，下列何者正確？', options: ['A. 可自由進行 360 度旋轉運動', 'B. 應避免大範圍旋轉與過度用力，保持乾燥', 'C. 注射部位可保持潮濕', 'D. 手臂活動不受限制'], correctAnswer: 'B. 應避免大範圍旋轉與過度用力，保持乾燥' },
+            { id: 3, question: '關於化學治療前預防性用藥與衛教，下列何者正確？', options: ['A. 嘔吐後再給予藥物即可', 'B. 應主動向醫療人員詢問藥物注意事項', 'C. 僅會引起急性嘔吐', 'D. 延遲性反應通常在 1 小時內發生'], correctAnswer: 'B. 應主動向醫療人員詢問藥物注意事項' },
+            { id: 4, question: '關於化學治療期間的飲食注意事項，下列何者正確？', options: ['A. 化療前應大量進食增加體力', 'B. 前1–2小時避免進食，採少量多餐軟質食物', 'C. 可多食用辛辣、油炸食物', 'D. 適量飲酒有助於減輕噁心'], correctAnswer: 'B. 前1–2小時避免進食，採少量多餐軟質食物' },
+            { id: 5, question: '關於化療引起之口腔炎／黏膜炎的照護，下列何者正確？', options: ['A. 使用硬毛牙刷加強清潔', 'B. 可使用含酒精漱口水', 'C. 確診者應持續護理，冰水可緩解不適', 'D. 應減少漱口次數'], correctAnswer: 'C. 確診者應持續護理，冰水可緩解不適' },
+            { id: 6, question: '第一次接受化學治療後的不良反應處理，下列何者正確？', options: ['A. 多可自行緩解無須回報', 'B. 醫師沒叮嚀就無須注意', 'C. 應主動回診告知醫師或聯繫個管師', 'D. 症狀嚴重到無法生活才需處理'], correctAnswer: 'C. 應主動回診告知醫師或聯繫個管師' },
+            { id: 7, question: '關於白血球過低時的生活注意事項，下列何者正確？', options: ['A. 可正常外出人多場所', 'B. 應勤洗手並配戴口罩', 'C. 僅需注意飲食，活動不限', 'D. 可進行激烈運動'], correctAnswer: 'B. 應勤洗手並配戴口罩' },
+            { id: 8, question: '關於白血球過低時建議攝取的食物，下列何者正確？', options: ['A. 生食蔬果與未熟蛋類', 'B. 高蛋白、堅果及富含維生素 B12 食物', 'C. 高糖甜食快速補充熱量', 'D. 醃漬、加工食品'], correctAnswer: 'B. 高蛋白、堅果及富含維生素 B12 食物' },
+            { id: 9, question: '關於放射治療的特性與不良反應，下列何者正確？', options: ['A. 穿透力弱僅影響表層', 'B. 常見不良反應包括皮膚炎、味覺改變', 'C. 不會影響口腔與吞嚥', 'D. 出現水泡屬正常無須處理'], correctAnswer: 'B. 常見不良反應包括皮膚炎、味覺改變' },
+            { id: 10, question: '關於化/放療後皮膚反應的照護，下列何者正確？', options: ['A. 穿著貼身緊身衣物', 'B. 使用熱水洗澡促進循環', 'C. 使用 pH 5 中性肥皂並以溫水清潔', 'D. 不需防曬'], correctAnswer: 'C. 使用 pH 5 中性肥皂並以溫水清潔' }
+        ];
+
+        const balloonColors = ['from-pink-500 to-rose-600', 'from-cyan-500 to-blue-600', 'from-emerald-500 to-teal-600', 'from-amber-500 to-orange-600', 'from-violet-500 to-purple-600'];
+
+        let score = 0;
+        let lives = INITIAL_LIVES;
+        let balloons = [];
+        let answeredIds = new Set();
+        let selectedBalloonId = null;
+        let gameActive = false;
+        let gameLoop;
+
+        function startGame() {
+            score = 0;
+            lives = INITIAL_LIVES;
+            balloons = [];
+            answeredIds = new Set();
+            selectedBalloonId = null;
+            gameActive = true;
+            
+            document.getElementById('game-menu').classList.add('hidden');
+            document.getElementById('game-end-overlay').classList.add('hidden');
+            document.getElementById('game-playing').classList.remove('hidden');
+            document.getElementById('stats-container').classList.remove('hidden');
+            
+            updateUI();
+            
+            if(gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(updateGame, 30);
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            // Move balloons
+            balloons.forEach((b, index) => {
+                b.y += b.speed;
+                if (b.y > 110) {
+                    lives--;
+                    balloons.splice(index, 1);
+                    if (selectedBalloonId === b.id) deselectBalloon();
+                    updateUI();
+                }
+            });
+
+            // Spawn balloons
+            if (Math.random() < 0.015 && balloons.length < 3 && answeredIds.size + balloons.length < questions.length) {
+                spawnBalloon();
+            }
+
+            // Check game over
+            if (lives <= 0) endGame('gameover');
+            if (answeredIds.size === questions.length) endGame('victory');
+
+            renderBalloons();
+        }
+
+        function spawnBalloon() {
+            const unanswered = questions.filter(q => !answeredIds.has(q.id) && !balloons.some(b => b.questionId === q.id));
+            if (unanswered.length === 0) return;
+
+            const question = unanswered[Math.floor(Math.random() * unanswered.length)];
+            const newBalloon = {
+                id: Date.now() + Math.random(),
+                questionId: question.id,
+                question: question,
+                color: balloonColors[Math.floor(Math.random() * balloonColors.length)],
+                x: 10 + Math.random() * 75,
+                y: -10,
+                speed: 0.15 + Math.random() * 0.1
+            };
+            balloons.push(newBalloon);
+        }
+
+        function renderBalloons() {
+            const stage = document.getElementById('balloon-stage');
+            // 我們只更新位置，不頻繁重建 DOM 以保持效能
+            balloons.forEach(b => {
+                let el = document.getElementById(`balloon-${b.id}`);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = `balloon-${b.id}`;
+                    el.className = `absolute cursor-pointer transition-transform duration-300 hover:scale-110`;
+                    el.innerHTML = `
+                        <div class="w-16 h-16 bg-gradient-to-br ${b.color} rounded-full shadow-2xl flex items-center justify-center border-2 border-white/30 relative">
+                            <div class="absolute top-2 left-2 w-3 h-3 bg-white/30 rounded-full"></div>
+                            <div id="ping-${b.id}" class="hidden absolute -inset-2 border-4 border-yellow-400 rounded-full animate-ping-custom"></div>
+                        </div>
+                        <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-slate-400 mx-auto -mt-1"></div>
+                        <div class="w-0.5 h-10 bg-slate-500 mx-auto"></div>
+                    `;
+                    el.onclick = () => selectBalloon(b);
+                    stage.appendChild(el);
+                }
+                el.style.left = `${b.x}%`;
+                el.style.bottom = `${b.y}%`;
+                
+                // Highlight selected
+                const ping = document.getElementById(`ping-${b.id}`);
+                if (selectedBalloonId === b.id) {
+                    ping.classList.remove('hidden');
+                    el.classList.add('scale-125', 'z-30');
+                } else {
+                    ping.classList.add('hidden');
+                    el.classList.remove('scale-125', 'z-30');
+                }
+            });
+
+            // Remove non-existent balloons from DOM
+            const allElements = stage.querySelectorAll('[id^="balloon-"]');
+            allElements.forEach(el => {
+                const id = parseFloat(el.id.replace('balloon-', ''));
+                if (!balloons.find(b => b.id === id)) el.remove();
+            });
+        }
+
+        function selectBalloon(balloon) {
+            selectedBalloonId = balloon.id;
+            const panelEmpty = document.getElementById('panel-empty');
+            const panelContent = document.getElementById('panel-content');
+            
+            panelEmpty.classList.add('hidden');
+            panelContent.classList.remove('hidden');
+            
+            panelContent.innerHTML = `
+                <div>
+                    <div class="inline-block bg-cyan-500 text-slate-900 px-3 py-1 rounded-md text-sm font-bold mb-3">
+                        題目 ${balloon.question.id}/${questions.length}
+                    </div>
+                    <div class="bg-slate-700 p-4 rounded-xl">
+                        <p class="text-lg font-bold leading-relaxed">${balloon.question.question}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 gap-3">
+                    ${balloon.question.options.map(opt => `
+                        <button onclick="handleAnswer('${opt.replace(/'/g, "\\'")}')" class="option-btn text-left p-4 rounded-xl border-2 border-slate-600 hover:border-cyan-500 hover:bg-slate-700 transition-all font-semibold">
+                            ${opt}
+                        </button>
+                    `).join('')}
+                </div>
+                <div id="feedback" class="hidden p-4 rounded-xl text-center font-bold"></div>
+            `;
+        }
+
+        function deselectBalloon() {
+            selectedBalloonId = null;
+            document.getElementById('panel-empty').classList.remove('hidden');
+            document.getElementById('panel-content').classList.add('hidden');
+        }
+
+        function handleAnswer(selectedOption) {
+            const balloon = balloons.find(b => b.id === selectedBalloonId);
+            if (!balloon) return;
+
+            const feedbackEl = document.getElementById('feedback');
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.disabled = true);
+
+            if (selectedOption === balloon.question.correctAnswer) {
+                score += 10;
+                answeredIds.add(balloon.questionId);
+                feedbackEl.innerHTML = "✨ 正確擊破！";
+                feedbackEl.className = "p-4 rounded-xl text-center font-bold bg-green-500/20 text-green-400 border-2 border-green-500 block";
+                
+                setTimeout(() => {
+                    balloons = balloons.filter(b => b.id !== balloon.id);
+                    deselectBalloon();
+                    updateUI();
+                }, 1000);
+            } else {
+                lives--;
+                feedbackEl.innerHTML = "❌ 答錯了，生命值下降";
+                feedbackEl.className = "p-4 rounded-xl text-center font-bold bg-rose-500/20 text-rose-400 border-2 border-rose-500 block";
+                
+                setTimeout(() => {
+                    feedbackEl.classList.add('hidden');
+                    buttons.forEach(btn => btn.disabled = false);
+                    updateUI();
+                }, 1000);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score-display').innerText = score;
+            const livesEl = document.getElementById('lives-display');
+            livesEl.innerHTML = '';
+            for (let i = 0; i < INITIAL_LIVES; i++) {
+                livesEl.innerHTML += i < lives ? '❤️' : '🖤';
+            }
+        }
+
+        function endGame(type) {
+            gameActive = false;
+            clearInterval(gameLoop);
+            
+            const overlay = document.getElementById('game-end-overlay');
+            const icon = document.getElementById('end-icon');
+            const title = document.getElementById('end-title');
+            const finalScore = document.getElementById('final-score');
+            
+            overlay.classList.remove('hidden');
+            finalScore.innerText = score;
+            
+            if (type === 'victory') {
+                icon.innerText = '🏆';
+                title.innerText = '大獲全勝！';
+            } else {
+                icon.innerText = '💀';
+                title.innerText = '任務失敗';
+            }
+        }
+    </script>
+</body>
+</html>
